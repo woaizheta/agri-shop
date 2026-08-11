@@ -1,0 +1,8 @@
+__pycache__
+*.pyc
+nongzi.db
+exports
+backups
+.codex
+specs
+.git

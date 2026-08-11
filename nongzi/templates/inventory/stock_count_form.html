@@ -1,0 +1,49 @@
+﻿{% extends "base.html" %}
+{% block title %}新建盘点单 - 丰收农资{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">首页</a></li><li class="breadcrumb-item"><a href="/inventory">库存</a></li><li class="breadcrumb-item"><a href="/inventory/stock-count">盘点</a></li><li class="breadcrumb-item active">新建</li></ol></nav>
+<h4><i class="fas fa-clipboard-check me-1"></i>新建盘点单</h4>
+<div class="card"><div class="card-body">
+  <form method="post" action="/inventory/stock-count">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">盘点范围</label>
+        <select class="form-select" name="scope_type" id="scopeType">
+          <option value="all">全部商品</option>
+          <option value="category">指定分类</option>
+          <option value="product">指定商品</option>
+        </select>
+      </div>
+      <div class="col-md-4" id="scopeValueDiv" style="display:none;">
+        <label class="form-label">选择分类</label>
+        <select class="form-select" name="scope_value" id="scopeValue">
+          {% for cat_data in categories %}
+          <optgroup label="{{ cat_data.cat.name }}">
+            <option value="{{ cat_data.cat.id }}">{{ cat_data.cat.name }}（全部）</option>
+            {% for child in cat_data.children %}
+            <option value="{{ child.id }}">-- {{ child.name }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">盘点人</label>
+        <input class="form-control" name="counter_name" value="管理员">
+      </div>
+    </div>
+    <div class="mt-3">
+      <button type="submit" class="btn btn-success"><i class="fas fa-check me-1"></i>生成盘点明细表</button>
+      <a href="/inventory/stock-count" class="btn btn-outline-secondary">取消</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("scopeType").addEventListener("change", function() {
+    var show = this.value !== "all";
+    document.getElementById("scopeValueDiv").style.display = show ? "" : "none";
+});
+</script>
+{% endblock %}

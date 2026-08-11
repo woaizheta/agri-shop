@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.db
+venv/
+data/
+exports/
+backups/
+*.egg-info/
+.env
+build/
+dist/
+*.log
+*.spec
+nongzi.spec
+build_portable.ps1
+launcher.py
+deploy.bat

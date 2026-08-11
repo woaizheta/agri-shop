@@ -1,0 +1,31 @@
+﻿{% extends "base.html" %}
+{% block title %}报表中心 - 丰收农资{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="fas fa-chart-bar me-1"></i>报表中心</h4>
+<div class="row g-3">
+  <div class="col-md-4">
+    <a href="/reports/sales" class="text-decoration-none">
+      <div class="card border-primary h-100"><div class="card-body text-center py-4">
+        <i class="fas fa-chart-line fa-3x text-primary mb-2"></i>
+        <h5>销售报表</h5><p class="text-muted small">按日期范围查看销售额、毛利统计</p>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/reports/sales-ledger" class="text-decoration-none">
+      <div class="card border-success h-100"><div class="card-body text-center py-4">
+        <i class="fas fa-book fa-3x text-success mb-2"></i>
+        <h5>销售台账</h5><p class="text-muted small">销售明细流水，支持日期筛选和Excel导出</p>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/reports/purchase-ledger" class="text-decoration-none">
+      <div class="card border-warning h-100"><div class="card-body text-center py-4">
+        <i class="fas fa-truck fa-3x text-warning mb-2"></i>
+        <h5>进货台账</h5><p class="text-muted small">进货明细流水，支持日期筛选和Excel导出</p>
+      </div></div>
+    </a>
+  </div>
+</div>
+{% endblock %}

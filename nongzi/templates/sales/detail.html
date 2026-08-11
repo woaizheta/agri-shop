@@ -1,0 +1,18 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ order.order_no }} - 销售单详情{% endblock %}
+{% block content %}
+<div class="row"><div class="col-12">
+<h4 class="mb-3"><i class="fas fa-receipt me-2"></i>销售单详情</h4>
+<div class="card mb-3"><div class="card-body row"><div class="col-md-6"><dl class="row mb-0"><dt class="col-sm-4">单号</dt><dd class="col-sm-8"><code>{{ order.order_no }}</code></dd><dt class="col-sm-4">客户</dt><dd class="col-sm-8">{{ order.customer.name if order.customer else "散客" }}</dd><dt class="col-sm-4">日期</dt><dd class="col-sm-8">{{ order.order_date.strftime("%Y-%m-%d %H:%M") if order.order_date else "-" }}</dd></dl></div><div class="col-md-6"><dl class="row mb-0"><dt class="col-sm-4">合计金额</dt><dd class="col-sm-8 fw-bold text-danger">{{ order.total_amount|currency }}</dd><dt class="col-sm-4">支付方式</dt><dd class="col-sm-8">{% if order.payment_method == "cash" %}现金{% elif order.payment_method == "wechat" %}微信{% elif order.payment_method == "alipay" %}支付宝{% elif order.payment_method == "credit" %}挂账{% else %}{{ order.payment_method }}{% endif %}</dd><dt class="col-sm-4">付款状态</dt><dd class="col-sm-8">{% if order.is_paid %}<span class="badge bg-success">已付</span>{% else %}<span class="badge bg-warning">未付</span>{% endif %}</dd></dl></div></div></div>
+<div class="card"><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>商品编码</th><th>商品名</th><th>数量</th><th>单价</th><th>金额</th></tr></thead><tbody>{% for item in order.items %}<tr><td><code>{{ item.product.code }}</code></td><td>{{ item.product.generic_name }} {{ item.product.spec }}</td><td class="text-end">{{ item.quantity }}</td><td class="text-end">{{ item.unit_price|currency }}</td><td class="text-end">{{ item.amount|currency }}</td></tr>{% endfor %}</tbody></table></div></div>
+<div class="mt-3">
+  <a href="/sales" class="btn btn-outline-secondary me-2">返回列表</a>
+  <a href="/sales/{{ order.id }}/receipt" class="btn btn-success" target="_blank">
+    <i class="fas fa-print me-1"></i>打印小票 (80mm)
+  </a>
+  <a href="/sales/{{ order.id }}/receipt?width=58mm" class="btn btn-outline-success" target="_blank">
+    <i class="fas fa-print me-1"></i>打印小票 (58mm)
+  </a>
+</div>
+</div></div>
+{% endblock %}

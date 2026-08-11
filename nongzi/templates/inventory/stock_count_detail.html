@@ -1,0 +1,75 @@
+﻿{% extends "base.html" %}
+{% block title %}盘点录入 - 丰收农资{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">首页</a></li><li class="breadcrumb-item"><a href="/inventory">库存</a></li><li class="breadcrumb-item"><a href="/inventory/stock-count">盘点</a></li><li class="breadcrumb-item active">{{ sc.order_no }}</li></ol></nav>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4><i class="fas fa-clipboard-check me-1"></i>{{ sc.order_no }}</h4>
+  <div>
+    <span class="badge bg-{{ 'success' if sc.status == 'completed' else 'warning' }} me-2">{{ '已完成' if sc.status == 'completed' else '进行中' }}</span>
+    <span class="text-muted small me-2">盘点人: {{ sc.counter_name }}</span>
+    <a href="/inventory/stock-count/{{ sc.id }}/export" class="btn btn-outline-info btn-sm me-1"><i class="fas fa-download me-1"></i>导出Excel</a>
+    {% if sc.status != 'completed' %}
+    <button class="btn btn-danger btn-sm" onclick="completeCount()"><i class="fas fa-check me-1"></i>完成盘点</button>
+    {% endif %}
+  </div>
+</div>
+<div class="card"><div class="card-body">
+  <div class="table-responsive"><table class="table table-hover">
+    <thead><tr><th>商品编码</th><th>商品名称</th><th>规格</th><th>系统库存</th><th>实盘数</th><th>差异</th></tr></thead>
+    <tbody>
+    {% for item in sc.items %}
+    <tr>
+      <td>{{ item.product.code }}</td>
+      <td>{{ item.product.generic_name }}</td>
+      <td>{{ item.product.spec or '' }}</td>
+      <td>{{ '%.2f'|format(item.system_quantity) }}</td>
+      <td>
+        {% if sc.status != 'completed' %}
+        <input type="number" step="0.01" class="form-control form-control-sm actual-input"
+               data-id="{{ item.id }}" value="{{ '%.2f'|format(item.actual_quantity) if item.actual_quantity is not none else '' }}"
+               style="width:100px;">
+        {% else %}
+        {{ '%.2f'|format(item.actual_quantity) if item.actual_quantity is not none else '-' }}
+        {% endif %}
+      </td>
+      <td>
+        {% set diff = (item.actual_quantity|float - item.system_quantity|float) if item.actual_quantity is not none else 0 %}
+        <span class="{{ 'text-success' if diff > 0 else ('text-danger' if diff < 0 else 'text-muted') }}">
+          {{ '%+.2f'|format(diff) if item.actual_quantity is not none else '-' }}
+        </span>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% if sc.status != 'completed' %}
+  <div class="text-end mt-2">
+    <button class="btn btn-primary" onclick="saveActual()"><i class="fas fa-save me-1"></i>保存实盘数</button>
+  </div>
+  {% endif %}
+</div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+function saveActual() {
+    var items = [];
+    document.querySelectorAll(".actual-input").forEach(function(input) {
+        items.push({ id: parseInt(input.dataset.id), actual: parseFloat(input.value) || 0 });
+    });
+    fetch("/inventory/stock-count/{{ sc.id }}/actual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: items })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { alert(d.message); if (d.success) location.reload(); });
+}
+
+function completeCount() {
+    if (!confirm("确定完成盘点吗？差异将自动调整库存！")) return;
+    if (!confirm("再次确认：盘盈/盘亏将生效！")) return;
+    fetch("/inventory/stock-count/{{ sc.id }}/complete", { method: "POST" })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { alert(d.message); if (d.success) location.reload(); });
+}
+</script>
+{% endblock %}

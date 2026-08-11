@@ -1,0 +1,55 @@
+﻿{% extends "base.html" %}
+{% block title %}首页 - 丰收农资店管理系统{% endblock %}
+{% block content %}
+
+{% if license_warnings %}
+<div class="alert alert-warning border-warning d-flex align-items-center mb-3" role="alert">
+  <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+  <div>
+    <strong>证照提醒：</strong>
+    {% for w in license_warnings %}
+      {{ w.type }}{% if w.expired %}<span class="text-danger"><strong>已过期！</strong>到期日: {{ w.expiry }}</span>{% else %}将于 {{ w.expiry }} 到期（剩余 <strong>{{ w.days_left }}</strong> 天），请尽快续期{% endif %}
+      {% if not loop.last %}；{% endif %}
+    {% endfor %}
+    <br><a href="/system" class="btn btn-warning btn-sm mt-1">前往系统设置</a>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-md-2"><div class="card border-primary"><div class="card-body text-center py-2"><h6 class="text-muted small mb-0">今日销售额</h6><h4 class="text-primary mb-0">{{ today_sales|currency }}</h4></div></div></div>
+  <div class="col-md-2"><div class="card border-success"><div class="card-body text-center py-2"><h6 class="text-muted small mb-0">今日开单</h6><h4 class="text-success mb-0">{{ today_order_count }}</h4></div></div></div>
+  <div class="col-md-2"><div class="card border-danger"><div class="card-body text-center py-2"><a href="/finance/ar" class="text-decoration-none"><h6 class="text-muted small mb-0">应收总额</h6><h4 class="text-danger mb-0">{{ ar_balance|currency }}</h4></a></div></div></div>
+  <div class="col-md-2"><div class="card border-warning"><div class="card-body text-center py-2"><a href="/inventory" class="text-decoration-none"><h6 class="text-muted small mb-0">效期预警</h6><h4 class="text-warning mb-0">{% if expiry_count > 0 %}{{ expiry_count }} 批次{% else %}无{% endif %}</h4></a></div></div></div>
+  <div class="col-md-2"><div class="card border-danger"><div class="card-body text-center py-2"><a href="/inventory" class="text-decoration-none"><h6 class="text-muted small mb-0">库存预警</h6><h4 class="text-danger mb-0">{% if low_stock_count > 0 %}{{ low_stock_count }} 商品{% else %}无{% endif %}</h4></a></div></div></div>
+  <div class="col-md-2"><div class="card border-info"><div class="card-body text-center py-2"><h6 class="text-muted small mb-0">商品总数</h6><h4 class="text-info mb-0">{{ product_count }}</h4></div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-8">
+    <div class="card mb-3"><div class="card-header fw-bold"><i class="fas fa-chart-line me-1"></i>近7日销售额趋势</div><div class="card-body"><canvas id="salesChart" height="60"></canvas></div></div>
+    {% if expiring_rows %}
+    <div class="card"><div class="card-header fw-bold"><i class="fas fa-clock me-1"></i>即将过期商品 (<=30天)</div>
+      <div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-warning"><tr><th>商品</th><th>批号</th><th>剩余量</th><th>剩余天数</th></tr></thead><tbody>
+      {% for r in expiring_rows %}<tr><td>{{ r.product.generic_name }}</td><td><code>{{ r.batch.batch_no }}</code></td><td class="text-end">{{ r.batch.available_quantity }}</td><td class="text-end {% if r.days_left <= 15 %}text-danger fw-bold{% endif %}">{{ r.days_left }} 天</td></tr>{% endfor %}
+      </tbody></table></div></div>
+    {% endif %}
+  </div>
+  <div class="col-md-4">
+    <a href="/sales/pos" class="text-decoration-none"><div class="card bg-primary bg-opacity-10 border-primary mb-3"><div class="card-body text-center py-3"><i class="fas fa-cash-register fa-2x text-primary mb-1"></i><h6 class="text-primary">零售开单</h6></div></div></a>
+    <a href="/purchases/new" class="text-decoration-none"><div class="card bg-success bg-opacity-10 border-success mb-3"><div class="card-body text-center py-3"><i class="fas fa-truck-loading fa-2x text-success mb-1"></i><h6 class="text-success">进货入库</h6></div></div></a>
+    <a href="/inventory" class="text-decoration-none"><div class="card bg-warning bg-opacity-10 border-warning mb-3"><div class="card-body text-center py-3"><i class="fas fa-warehouse fa-2x text-warning mb-1"></i><h6 class="text-warning">库存查询</h6></div></div></a>
+    <a href="/trace" class="text-decoration-none"><div class="card bg-info bg-opacity-10 border-info"><div class="card-body text-center py-3"><i class="fas fa-search-location fa-2x text-info mb-1"></i><h6 class="text-info">追溯查询</h6></div></div></a>
+  </div>
+</div>
+
+<div class="text-center mt-3">
+  <small class="text-muted">丰收农资店管理系统 v{{ version }}</small>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const sc = {{ chart_json|safe }};
+new Chart(document.getElementById("salesChart"), {type:"line",data:{labels:sc.labels,datasets:[{label:"销售额",data:sc.data,borderColor:"#198754",tension:0.3,fill:true,backgroundColor:"rgba(25,135,84,0.1)"}]},options:{plugins:{legend:{display:false}}}});
+</script>
+{% endblock %}

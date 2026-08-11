@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}新增进货单- 丰收农资{% endblock %}
+{% block head_extra %}<style>.product-search-results { max-height:200px; overflow-y:auto; position:absolute; z-index:1000; width:100%; }</style>{% endblock %}
+{% block content %}
+<div class="row"><div class="col-12">
+<h4 class="mb-3"><i class="fas fa-truck-loading me-2"></i>新增进货单/h4>
+<form method="post" action="/purchases" id="purchaseForm">
+<div class="card mb-3"><div class="card-body row g-3">
+<div class="col-md-3"><label class="form-label">供应商<span class="text-danger">*</span></label><select class="form-select" name="supplier_id" required><option value="">-- 请选择 --</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+<div class="col-md-3"><label class="form-label">日期</label><input class="form-control" type="date" name="order_date" value="{{ today }}" required></div>
+<div class="col-md-6"><label class="form-label">备注</label><input class="form-control" name="note" placeholder="可选></div>
+</div></div>
+
+<div class="card mb-3"><div class="card-header d-flex justify-content-between align-items-center"><span class="fw-bold">商品明细</span><button type="button" class="btn btn-sm btn-outline-success" onclick="addRow()"><i class="fas fa-plus"></i> 添加行/button></div>
+<div class="table-responsive"><table class="table table-hover mb-0" id="itemsTable"><thead class="table-light"><tr><th width="30%">商品</th><th width="10%">数量</th><th width="10%">单价</th><th width="10%">金额</th><th width="10%">批号*</th><th width="12%">生产日期*</th><th width="12%">有效期至*</th><th width="6%"></th></tr></thead><tbody></tbody><tfoot class="table-light"><tr><td colspan="5" class="text-end fw-bold">合计：/td><td colspan="3"><span id="totalAmount" class="fw-bold text-danger">0.00</span></td></tr></tfoot></table></div>
+</div>
+
+<div class="d-flex gap-2"><button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>保存入库</button><a href="/purchases" class="btn btn-outline-secondary">取消</a></div>
+</form>
+</div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let rowIdx = 0;
+
+function addRow() {
+    rowIdx++;
+    var tr = document.createElement("tr");
+    tr.id = "row-" + rowIdx;
+    tr.innerHTML =
+        '<td>' +
+        '  <div class="position-relative">' +
+        '    <input class="form-control product-search" data-row="' + rowIdx + '" placeholder="搜索商品名称/编码..." autocomplete="off">' +
+        '    <div class="product-search-results list-group" id="results-' + rowIdx + '"></div>' +
+        '  </div>' +
+        '</td>' +
+        '<td><input class="form-control" type="number" step="any" name="quantity" value="1" onchange="calcRow(' + rowIdx + ')"></td>' +
+        '<td><input class="form-control" type="number" step="0.01" name="unit_price" value="0" onchange="calcRow(' + rowIdx + ')"></td>' +
+        '<td><span class="form-control-plaintext text-end" id="amt-' + rowIdx + '">0.00</span></td>' +
+        '<td><input class="form-control" name="batch_no" placeholder="必填"></td>' +
+        '<td><input class="form-control" type="date" name="prod_date"></td>' +
+        '<td><input class="form-control" type="date" name="expiry_date"></td>' +
+        '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(' + rowIdx + ')"><i class="fas fa-times"></i></button></td>';
+    document.getElementById("itemsTable").querySelector("tbody").appendChild(tr);
+    initSearch(rowIdx);
+}
+
+function removeRow(idx) {
+    var row = document.getElementById("row-" + idx);
+    if (row) row.remove();
+    calcTotal();
+}
+
+var searchTimer;
+function initSearch(idx) {
+    var inp = document.querySelector("#row-" + idx + " .product-search");
+    var res = document.getElementById("results-" + idx);
+    if (!inp || !res) return;
+    inp.addEventListener("input", function() {
+        clearTimeout(searchTimer);
+        var q = this.value.trim();
+        if (q.length < 1) { res.innerHTML = ""; return; }
+        searchTimer = setTimeout(function() {
+            fetch("/products/search?q=" + encodeURIComponent(q))
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    res.innerHTML = "";
+                    data.forEach(function(p) {
+                        var a = document.createElement("a");
+                        a.className = "list-group-item list-group-item-action py-1 small";
+                        a.href = "#";
+                        a.textContent = p.code + " " + p.name + (p.spec ? " " + p.spec : "") + " | ¥" + p.retailPrice + " | 库存:" + p.stock;
+                        a.onclick = function(e) {
+                            e.preventDefault();
+                            inp.value = p.name;
+                            inp.dataset.pid = p.id;
+                            inp.dataset.price = p.retailPrice;
+                            var priceInput = document.querySelector("#row-" + idx + ' [name="unit_price"]');
+                            if (priceInput) priceInput.value = p.retailPrice;
+                            calcRow(idx);
+                            res.innerHTML = "";
+                        };
+                        res.appendChild(a);
+                    });
+                });
+        }, 300);
+    });
+}
+
+function calcRow(idx) {
+    var qty = parseFloat(document.querySelector("#row-" + idx + ' [name="quantity"]').value) || 0;
+    var price = parseFloat(document.querySelector("#row-" + idx + ' [name="unit_price"]').value) || 0;
+    var amt = document.getElementById("amt-" + idx);
+    if (amt) amt.textContent = (qty * price).toFixed(2);
+    calcTotal();
+}
+
+function calcTotal() {
+    var t = 0;
+    document.querySelectorAll("#itemsTable tbody tr").forEach(function(r) {
+        var cells = r.querySelectorAll("td");
+        t += parseFloat(cells[3].textContent) || 0;
+    });
+    document.getElementById("totalAmount").textContent = t.toFixed(2);
+}
+
+document.getElementById("purchaseForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    var rows = document.querySelectorAll("#itemsTable tbody tr");
+    var hasProduct = false;
+    var fd = new FormData();
+    fd.append("supplier_id", this.supplier_id.value);
+    fd.append("order_date", this.order_date.value);
+    fd.append("note", this.note.value || "");
+    rows.forEach(function(r) {
+        var inp = r.querySelector(".product-search");
+        var pid = inp.dataset.pid || "";
+        if (pid) hasProduct = true;
+        fd.append("product_id", pid);
+        fd.append("quantity", r.querySelector('[name="quantity"]').value);
+        fd.append("unit_price", r.querySelector('[name="unit_price"]').value);
+        fd.append("batch_no", r.querySelector('[name="batch_no"]').value);
+        fd.append("prod_date", r.querySelector('[name="prod_date"]').value);
+        fd.append("expiry_date", r.querySelector('[name="expiry_date"]').value);
+    });
+    if (!hasProduct) { alert("请至少搜索并选择一个商品); return; }
+    var formEl = document.createElement("form");
+    formEl.method = "POST";
+    formEl.action = "/purchases";
+    for (var pair of fd.entries()) {
+        var i = document.createElement("input");
+        i.type = "hidden";
+        i.name = pair[0];
+        i.value = pair[1];
+        formEl.appendChild(i);
+    }
+    document.body.appendChild(formEl);
+    formEl.submit();
+});
+
+</script>
+{% endblock %}

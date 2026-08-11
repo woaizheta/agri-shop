@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{% if product %}编辑商品{% else %}新增商品{% endif %} - 丰收农资{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-8 mx-auto">
+    <h4 class="mb-3"><i class="fas fa-box me-2"></i>{% if product %}编辑商品{% else %}新增商品{% endif %}</h4>
+    <form method="post" action="{% if product %}/products/{{ product.id }}{% else %}/products{% endif %}">
+      <div class="card mb-3">
+        <div class="card-header fw-bold">基本信息</div>
+        <div class="card-body row g-3">
+          <div class="col-md-6"><label class="form-label">通用名 <span class="text-danger">*</span></label><input class="form-control" name="generic_name" value="{{ product.generic_name if product else '' }}" required></div>
+          <div class="col-md-6"><label class="form-label">商品名</label><input class="form-control" name="trade_name" value="{{ product.trade_name if product else '' }}"></div>
+          <div class="col-md-4"><label class="form-label">条码</label><input class="form-control" name="barcode" value="{{ product.barcode if product else '' }}"></div>
+          <div class="col-md-4"><label class="form-label">规格</label><input class="form-control" name="spec" value="{{ product.spec if product else '' }}"></div>
+          <div class="col-md-4"><label class="form-label">基本单位 <span class="text-danger">*</span></label><input class="form-control" name="base_unit" value="{{ product.base_unit if product else '' }}" placeholder="瓶/袋/箱/桶" required></div>
+          <div class="col-md-3"><label class="form-label">拆零单位</label><input class="form-control" name="split_unit" value="{{ product.split_unit if product else '' }}" placeholder="g/ml"></div>
+          <div class="col-md-3"><label class="form-label">换算率</label><input class="form-control" type="number" step="any" name="conversion_rate" value="{{ product.conversion_rate if product else '' }}" placeholder="1瓶=500ml → 填500"></div>
+          <div class="col-md-3"><label class="form-label">分类</label><select class="form-select" name="category_id"><option value="">-- 请选择 --</option>{% for c in categories %}<option value="{{ c.id }}" {% if product and product.category_id == c.id %}selected{% endif %}>{% if c.parent_id %}&nbsp;&nbsp;{% endif %}{{ c.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">毒性</label><select class="form-select" name="toxicity">{% for val,label in toxicity_levels %}<option value="{{ val }}" {% if product and product.toxicity == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header fw-bold">产品信息</div>
+        <div class="card-body row g-3">
+          <div class="col-md-3"><label class="form-label">剂型</label><input class="form-control" name="formulation" value="{{ product.formulation if product else '' }}"></div>
+          <div class="col-md-3"><label class="form-label">含量</label><input class="form-control" name="content" value="{{ product.content if product else '' }}"></div>
+          <div class="col-md-3"><label class="form-label">生产企业</label><input class="form-control" name="manufacturer" value="{{ product.manufacturer if product else '' }}"></div>
+          <div class="col-md-3"><label class="form-label">品牌</label><input class="form-control" name="brand" value="{{ product.brand if product else '' }}"></div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header fw-bold">证照信息</div>
+        <div class="card-body row g-3">
+          <div class="col-md-6"><label class="form-label">登记证号</label><input class="form-control" name="reg_cert_no" value="{{ product.reg_cert_no if product else '' }}"></div>
+          <div class="col-md-6"><label class="form-label">生产许可证号</label><input class="form-control" name="produce_lic_no" value="{{ product.produce_lic_no if product else '' }}"></div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header fw-bold">价格参考</div>
+        <div class="card-body row g-3">
+          <div class="col-md-3"><label class="form-label">参考进价</label><div class="input-group"><span class="input-group-text">¥</span><input class="form-control" type="number" step="0.01" name="ref_cost" value="{{ product.ref_cost if product else '' }}"></div></div>
+          <div class="col-md-3"><label class="form-label">零售价</label><div class="input-group"><span class="input-group-text">¥</span><input class="form-control" type="number" step="0.01" name="retail_price" value="{{ product.retail_price if product else '' }}"></div></div>
+          <div class="col-md-3"><label class="form-label">批发价</label><div class="input-group"><span class="input-group-text">¥</span><input class="form-control" type="number" step="0.01" name="wholesale_price" value="{{ product.wholesale_price if product else '' }}"></div></div>
+          <div class="col-md-3"><label class="form-label">会员价</label><div class="input-group"><span class="input-group-text">¥</span><input class="form-control" type="number" step="0.01" name="member_price" value="{{ product.member_price if product else '' }}"></div></div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>保存</button>
+        <a href="/products" class="btn btn-outline-secondary">取消</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

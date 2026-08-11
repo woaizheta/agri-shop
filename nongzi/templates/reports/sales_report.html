@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}销售报表 - 丰收农资{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="fas fa-chart-bar me-2"></i>销售报表</h4>
+<div class="btn-group mb-3"><a href="?period=daily&selected_date={{ selected_date }}" class="btn btn-outline-success {% if period=='daily' %}active{% endif %}">日汇总</a><a href="?period=monthly&selected_date={{ selected_date }}" class="btn btn-outline-success {% if period=='monthly' %}active{% endif %}">月汇总</a><a href="?period=yearly&selected_date={{ selected_date }}" class="btn btn-outline-success {% if period=='yearly' %}active{% endif %}">年汇总</a></div>
+<form class="row g-2 mb-3"><div class="col-md-3"><input class="form-control" type="{% if period=='yearly' %}number{% else %}date{% endif %}" name="selected_date" value="{{ selected_date }}"></div><div class="col-md-2"><button class="btn btn-outline-success">查询</button></div></form>
+<div class="card mb-3"><div class="card-body text-center"><h6 class="text-muted">合计</h6><h2 class="text-success">{{ total|currency }}</h2></div></div>
+{% if period != 'daily' and chart_json %}<div class="card mb-3"><div class="card-body"><canvas id="salesReportChart" height="60"></canvas></div></div>{% endif %}
+{% if prod_rank %}<div class="card mb-3"><div class="card-header fw-bold"><i class="fas fa-crown me-1"></i>商品排行 Top 20</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>商品</th><th>销量</th><th>销售额</th></tr></thead><tbody>{% for p in prod_rank %}<tr><td>{{ p.name }}</td><td class="text-end">{{ p.qty }}</td><td class="text-end">{{ p.amount|currency }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+{% if rows %}<div class="card"><div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead><tr><th>时间</th><th>单号</th><th>客户</th><th>金额</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.label }}</td><td><code>{{ r.order_no }}</code></td><td>{{ r.customer }}</td><td class="text-end">{{ r.amount|currency }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if chart_json and period != 'daily' %}<script>const cd = {{ chart_json|safe }}; new Chart(document.getElementById('salesReportChart'), {type:'bar',data:{labels:cd.labels,datasets:[{label:'销售额',data:cd.data,backgroundColor:'rgba(25,135,84,0.7)'}]}});</script>{% endif %}
+{% endblock %}

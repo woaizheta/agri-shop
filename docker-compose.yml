@@ -1,0 +1,12 @@
+# 丰收农资店管理系统 - Docker Compose
+services:
+  agrishop:
+    build: .
+    container_name: agrishop
+    ports:
+      - "8000:8000"
+    environment:
+      - AGRISHOP_DATA_DIR=/app/data
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

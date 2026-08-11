@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>销售小票</title>
+    <style>
+        @page {
+            size: {{ receipt_width }} 297mm;
+            margin: 2mm;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Courier New", "SimHei", monospace;
+            font-size: 10px;
+            width: {{ receipt_width }};
+            padding: 2mm;
+            color: #000;
+        }
+        .header { text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 2px; }
+        .sub-header { text-align: center; font-size: 9px; margin-bottom: 2px; }
+        .divider { border-top: 1px dashed #000; margin: 4px 0; }
+        .row { display: flex; justify-content: space-between; margin: 1px 0; }
+        .col-name { flex: 2; }
+        .col-qty { flex: 1; text-align: center; }
+        .col-amt { flex: 1; text-align: right; }
+        .table-header { font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 2px; }
+        .total { font-weight: bold; font-size: 12px; margin-top: 2px; }
+        .footer { text-align: center; margin-top: 6px; font-size: 10px; }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">{{ store_name }}</div>
+    {% if store_address %}<div class="sub-header">{{ store_address }}</div>{% endif %}
+    {% if store_phone %}<div class="sub-header">电话: {{ store_phone }}</div>{% endif %}
+    <div class="divider"></div>
+    <div class="row"><span>单号: {{ order.order_no }}</span></div>
+    <div class="row"><span>日期: {{ order.order_date.strftime("%Y-%m-%d %H:%M") if order.order_date else "" }}</span></div>
+    {% if order.customer %}<div class="row"><span>客户: {{ order.customer.name }}</span></div>{% endif %}
+    <div class="divider"></div>
+    <div class="row table-header">
+        <span class="col-name">商品</span>
+        <span class="col-qty">数量</span>
+        <span class="col-amt">金额</span>
+    </div>
+    {% for item in order.items %}
+    <div class="row">
+        <span class="col-name">{{ item.product.generic_name }}</span>
+        <span class="col-qty">{{ "%.2f"|format(item.quantity) }}</span>
+        <span class="col-amt">¥{{ "%.2f"|format(item.amount) }}</span>
+    </div>
+    {% endfor %}
+    <div class="divider"></div>
+    <div class="row total">
+        <span>合计</span>
+        <span>¥{{ "%.2f"|format(order.total_amount) }}</span>
+    </div>
+    <div class="row">
+        <span>支付: {{ order.payment_method }}</span>
+    </div>
+    {% if order.payment_method == "credit" %}
+    <div class="row"><span style="color:red;">⚠ 挂账（赊销），请及时回款</span></div>
+    {% endif %}
+    <div class="divider"></div>
+    <div class="footer">谢谢惠顾!</div>
+    {% if version %}<div class="sub-header" style="margin-top:4px;">{{ version }}</div>{% endif %}
+    <script>window.onload = function() { setTimeout(function() { window.print(); }, 300); };</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+﻿{% extends "base.html" %}
+{% block title %}系统设置 - 丰收农资{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">首页</a></li><li class="breadcrumb-item active">系统设置</li></ol></nav>
+
+<div class="row g-4">
+  <!-- Store Settings -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-store me-1"></i>店铺信息</div>
+      <div class="card-body">
+        <form id="storeConfigForm">
+          <div class="mb-2"><label class="form-label">店铺名称</label><input class="form-control" name="store_name" value="{{ store_name }}"></div>
+          <div class="mb-2"><label class="form-label">地址</label><input class="form-control" name="store_address" value="{{ store_address }}"></div>
+          <div class="mb-2"><label class="form-label">电话</label><input class="form-control" name="store_phone" value="{{ store_phone }}"></div>
+          <button type="submit" class="btn btn-primary w-100">保存店铺信息</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- License Reminders -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-id-card me-1"></i>证照提醒</div>
+      <div class="card-body">
+        <form id="licenseConfigForm">
+          <div class="mb-2"><label class="form-label">农药经营许可证到期日</label><input type="date" class="form-control" name="license_pesticide_expiry" value="{{ config.get('license_pesticide_expiry', '') }}"></div>
+          <div class="mb-2"><label class="form-label">营业执照到期日</label><input type="date" class="form-control" name="license_business_expiry" value="{{ config.get('license_business_expiry', '') }}"></div>
+          <div class="mb-2"><label class="form-label">提前提醒天数</label><input type="number" class="form-control" name="license_remind_days" value="{{ config.get('license_remind_days', '30') }}" min="1" max="365"></div>
+          <div class="mb-2"><label class="form-label">小票打印宽度</label>
+            <select class="form-select" name="receipt_width">
+              <option value="80mm" {% if config.get("receipt_width", "80mm") == "80mm" %}selected{% endif %}>80mm（标准）</option>
+              <option value="58mm" {% if config.get("receipt_width", "80mm") == "58mm" %}selected{% endif %}>58mm（窄式）</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">保存证照设置</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backup -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-database me-1"></i>数据备份</div>
+      <div class="card-body">
+        <button class="btn btn-success w-100 mb-3" onclick="doBackup()"><i class="fas fa-download me-1"></i>一键备份数据库</button>
+        <div id="backupMsg"></div>
+        <hr>
+        <h6>备份历史</h6>
+        {% if backups %}
+        <div class="list-group list-group-flush small">
+          {% for b in backups %}
+          <div class="list-group-item d-flex justify-content-between">
+            <span>{{ b.name }}</span>
+            <span class="text-muted">{{ b.size_mb }} MB</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted small">暂无备份</p>
+        {% endif %}
+        <hr>
+        <h6 class="text-danger">恢复数据库（危险操作）</h6>
+        <div class="mb-2"><input type="file" class="form-control" id="restoreFile" accept=".db"></div>
+        <button class="btn btn-danger w-100" onclick="doRestore()" id="restoreBtn" disabled><i class="fas fa-upload me-1"></i>恢复数据库</button>
+        <div id="restoreMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demo Data -->
+  <div class="col-md-6">
+    <div class="card border-warning">
+      <div class="card-header bg-warning text-dark"><i class="fas fa-flask me-1"></i>演示数据</div>
+      <div class="card-body">
+        <p class="small">初始化演示数据将<strong>清空所有现有数据</strong>，并预置商品、供应商、客户和示例交易记录。</p>
+        <button class="btn btn-warning w-100" onclick="doInitDemo()"><i class="fas fa-sync me-1"></i>初始化演示数据</button>
+        <div id="demoMsg" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-info-circle me-1"></i>关于</div>
+      <div class="card-body text-center">
+        <h5>丰收农资店管理系统 (AgriShop)</h5>
+        <p class="text-muted">版本: v{{ version }}</p>
+        <p class="text-muted small">FastAPI + SQLite + Bootstrap 5</p>
+        <p class="text-muted small">面向乡镇农资零售店的进销存+合规管理工具</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("restoreFile").addEventListener("change", function() {
+    document.getElementById("restoreBtn").disabled = !this.files.length;
+});
+
+function doBackup() {
+    var btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>备份中...';
+    fetch("/system/backup", { method: "POST" })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            document.getElementById("backupMsg").innerHTML = '<div class="alert alert-' + (d.success ? "success" : "danger") + ' py-1 small">' + d.message + (d.name ? " (" + d.name + ")" : "") + '</div>';
+            if (d.success) setTimeout(function() { location.reload(); }, 1500);
+        })
+        .catch(function() {
+            document.getElementById("backupMsg").innerHTML = '<div class="alert alert-danger py-1 small">备份失败</div>';
+        })
+        .finally(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download me-1"></i>一键备份数据库'; });
+}
+
+function doRestore() {
+    if (!confirm("确定要恢复数据库吗？当前数据将被覆盖！")) return;
+    if (!confirm("再次确认：恢复后原数据不可恢复！")) return;
+    var file = document.getElementById("restoreFile").files[0];
+    if (!file) return;
+    var formData = new FormData();
+    formData.append("file", file);
+    fetch("/system/restore", { method: "POST", body: formData })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            document.getElementById("restoreMsg").innerHTML = '<div class="alert alert-' + (d.success ? "success" : "danger") + ' py-1 small">' + d.message + '</div>';
+        });
+}
+
+function doInitDemo() {
+    if (!confirm("确定要初始化演示数据吗？所有现有数据将被清空！")) return;
+    if (!confirm("再次确认：数据不可恢复！")) return;
+    fetch("/system/init-demo", { method: "POST" })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            document.getElementById("demoMsg").innerHTML = '<div class="alert alert-' + (d.success ? "success" : "danger") + ' py-1 small">' + d.message + '</div>';
+            if (d.success) setTimeout(function() { location.href = "/"; }, 1500);
+        });
+}
+
+// Save config forms
+document.getElementById("storeConfigForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    fetch("/system/save-config", { method: "POST", body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { alert(d.message); if (d.success) location.reload(); });
+});
+
+document.getElementById("licenseConfigForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    fetch("/system/save-config", { method: "POST", body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { alert(d.message); if (d.success) location.reload(); });
+});
+</script>
+{% endblock %}

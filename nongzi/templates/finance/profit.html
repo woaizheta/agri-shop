@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}利润概览 - 丰收农资{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h4><i class="fas fa-chart-line me-2"></i>利润概览</h4>
+<div class="d-flex gap-2">
+<ul class="nav nav-tabs"><li class="nav-item"><a class="nav-link" href="/finance/ar">应收</a></li><li class="nav-item"><a class="nav-link" href="/finance/ap">应付</a></li><li class="nav-item"><a class="nav-link" href="/finance/expenses">费用</a></li><li class="nav-item"><a class="nav-link active" href="/finance/profit">利润</a></li></ul>
+</div></div>
+<div class="row g-3 mb-3"><div class="col-md-3"><div class="card bg-success bg-opacity-10 border-success"><div class="card-body text-center"><h6 class="text-muted">销售额</h6><h3 class="text-success">{{ sales|currency }}</h3></div></div></div><div class="col-md-3"><div class="card bg-info bg-opacity-10 border-info"><div class="card-body text-center"><h6 class="text-muted">毛利</h6><h3 class="text-info">{{ gross|currency }}</h3></div></div></div><div class="col-md-3"><div class="card bg-warning bg-opacity-10 border-warning"><div class="card-body text-center"><h6 class="text-muted">费用</h6><h3 class="text-warning">{{ expenses|currency }}</h3></div></div></div><div class="col-md-3"><div class="card bg-danger bg-opacity-10 border-danger"><div class="card-body text-center"><h6 class="text-muted">净利润</h6><h3 class="text-danger">{{ net|currency }}</h3></div></div></div></div>
+<div class="card mb-3"><div class="card-body">
+<div class="btn-group mb-2"><a href="?period=week" class="btn btn-sm btn-outline-success {% if period=='week' %}active{% endif %}">周</a><a href="?period=month" class="btn btn-sm btn-outline-success {% if period=='month' %}active{% endif %}">月</a><a href="?period=year" class="btn btn-sm btn-outline-success {% if period=='year' %}active{% endif %}">年</a></div>
+<form class="row g-2 mb-2"><div class="col-md-3"><input class="form-control form-control-sm" type="date" name="date_from" value="{{ date_from }}"></div><div class="col-md-3"><input class="form-control form-control-sm" type="date" name="date_to" value="{{ date_to }}"></div><div class="col-md-2"><button class="btn btn-sm btn-outline-success">查询</button></div></form>
+<canvas id="profitChart" height="80"></canvas>
+</div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const cd = {{ chart_data|safe }};
+new Chart(document.getElementById('profitChart'), {type:'line',data:{labels:cd.labels,datasets:[{label:'销售额',data:cd.sales,borderColor:'#198754'},{label:'毛利',data:cd.sales.map((v,i)=>v-cd.cost[i]),borderColor:'#0dcaf0'},{label:'费用',data:cd.expense,borderColor:'#ffc107'},{label:'净利润',data:cd.sales.map((v,i)=>v-cd.cost[i]-cd.expense[i]),borderColor:'#dc3545'}]}});
+</script>
+{% endblock %}

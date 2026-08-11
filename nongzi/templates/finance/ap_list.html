@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}应付账款 - 丰收农资{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h4><i class="fas fa-money-check-alt me-2"></i>应付账款</h4>
+<div class="d-flex gap-2">
+<ul class="nav nav-tabs"><li class="nav-item"><a class="nav-link" href="/finance/ar">应收</a></li><li class="nav-item"><a class="nav-link active" href="/finance/ap">应付</a></li><li class="nav-item"><a class="nav-link" href="/finance/expenses">费用</a></li><li class="nav-item"><a class="nav-link" href="/finance/profit">利润</a></li></ul>
+</div></div>
+<div class="card">
+<div class="card-body p-2">
+<button class="btn btn-warning btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#payModal"><i class="fas fa-plus me-1"></i>录入付款</button>
+<div class="table-responsive small"><table class="table table-hover table-sm mb-0"><thead class="table-light"><tr><th>供应商</th><th>本期进货应付</th><th>本期付款</th><th>余额</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.supplier.name }}</td><td class="text-end">{{ r.purchases|currency }}</td><td class="text-end">{{ r.payments|currency }}</td><td class="text-end {% if r.balance > 0 %}text-danger fw-bold{% endif %}">{{ r.balance|currency }}</td></tr>{% endfor %}</tbody></table></div>
+</div></div>
+
+<div class="modal fade" id="payModal"><div class="modal-dialog"><div class="modal-content"><form method="post" action="/finance/pay">
+<div class="modal-header"><h5>录入付款</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<div class="mb-3"><label class="form-label">供应商</label><select class="form-select" name="supplier_id" required><option value="">-- 请选择 --</option>{% for r in rows %}<option value="{{ r.supplier.id }}">{{ r.supplier.name }} (应付 {{ r.balance|currency }})</option>{% endfor %}</select></div>
+<div class="mb-3"><label class="form-label">付款金额</label><input class="form-control" type="number" step="0.01" name="amount" required></div>
+<div class="mb-3"><label class="form-label">备注</label><input class="form-control" name="note"></div>
+</div><div class="modal-footer"><button type="submit" class="btn btn-success">确认付款</button></div>
+</form></div></div></div>
+{% endblock %}
