@@ -88,8 +88,16 @@ def repay(request: Request, customer_id: int = Form(...), amount: float = Form(0
         unpaid = [o for o in unpaid if o.id in selected_ids]
     else:
         unpaid = [o for o in unpaid if not o.is_paid]
+    selected_unpaid_total = sum(
+        max(order.total_amount - (order.paid_amount or 0), 0) for order in unpaid
+    )
+    credit_balance = float(cust.credit_balance or 0)
+    if selected_unpaid_total <= 0:
+        return RedirectResponse("/finance/ar?error=没有可还款的应收订单", 302)
+    if amount > selected_unpaid_total + 0.01 or amount > credit_balance + 0.01:
+        return RedirectResponse("/finance/ar?error=还款金额不能超过待还金额", 302)
     remaining = amount
-    total_balance = cust.credit_balance
+    total_balance = credit_balance
     for order in unpaid:
         if remaining <= 0: break
         unpaid_amt = order.total_amount - (order.paid_amount or 0)
@@ -172,14 +180,24 @@ def pay_supplier(request: Request, supplier_id: int = Form(...), amount: float =
     if selected_ids:
         orders = [o for o in orders if o.id in selected_ids]
 
+    paid_map = {}
+    for order in orders:
+        paid = db.query(func.coalesce(func.sum(APTransaction.amount), 0)).filter(
+            APTransaction.purchase_order_id == order.id,
+            APTransaction.type == "payment").scalar() or 0
+        paid_map[order.id] = paid
+    selected_unpaid_total = sum(max(order.total_amount - paid_map[order.id], 0) for order in orders)
+    if selected_unpaid_total <= 0:
+        return RedirectResponse("/finance/ap?error=没有可付款的进货单", 302)
+    if amount > selected_unpaid_total + 0.01:
+        return RedirectResponse("/finance/ap?error=付款金额不能超过待付金额", 302)
+
     remaining = amount
     balance = total_p - total_pay
     for order in orders:
         if remaining <= 0:
             break
-        paid = db.query(func.coalesce(func.sum(APTransaction.amount), 0)).filter(
-            APTransaction.purchase_order_id == order.id,
-            APTransaction.type == "payment").scalar() or 0
+        paid = paid_map[order.id]
         unpaid_amt = order.total_amount - paid
         if unpaid_amt <= 0:
             continue
@@ -190,9 +208,6 @@ def pay_supplier(request: Request, supplier_id: int = Form(...), amount: float =
                              note=note or f"付款核销 {order.order_no}"))
         balance = new_balance
         remaining -= settle
-    if remaining > 0:
-        db.add(APTransaction(supplier_id=supplier_id, type="payment", amount=remaining,
-                             balance_after=balance - remaining, note=note or "付款"))
     db.commit()
     return RedirectResponse("/finance/ap", 302)
 
