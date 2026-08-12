@@ -10,7 +10,7 @@
 <div class="card">
 <div class="card-body p-2">
 <button class="btn btn-success btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#repayModal"><i class="fas fa-plus me-1"></i>录入还款</button>
-<div class="table-responsive small"><table class="table table-hover table-sm mb-0"><thead class="table-light"><tr><th>客户</th><th>本期赊销</th><th>本期还款</th><th>当前余额</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.customer.name }}</td><td class="text-end">{{ r.credit_sales|currency }}</td><td class="text-end">{{ r.repayments|currency }}</td><td class="text-end {% if r.balance > 0 %}text-danger fw-bold{% endif %}">{{ r.balance|currency }}</td></tr>{% endfor %}</tbody></table></div>
+<div class="table-responsive small"><table class="table table-hover table-sm mb-0"><thead class="table-light"><tr><th>客户</th><th>本期赊销</th><th>本期还款</th><th>当前余额</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.customer.name }}</td><td class="">{{ r.credit_sales|currency }}</td><td class="">{{ r.repayments|currency }}</td><td class="{% if r.balance > 0 %}text-danger fw-bold{% endif %}">{{ r.balance|currency }}</td></tr>{% endfor %}</tbody></table></div>
 </div></div>
 
 <div class="modal fade" id="repayModal"><div class="modal-dialog"><div class="modal-content"><form method="post" action="/finance/repay">

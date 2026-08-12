@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}首页 - 丰收农资店管理系统{% endblock %}
 {% block content %}
 
@@ -31,7 +31,7 @@
     {% if expiring_rows %}
     <div class="card"><div class="card-header fw-bold"><i class="fas fa-clock me-1"></i>即将过期商品 (<=30天)</div>
       <div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-warning"><tr><th>商品</th><th>批号</th><th>剩余量</th><th>剩余天数</th></tr></thead><tbody>
-      {% for r in expiring_rows %}<tr><td>{{ r.product.generic_name }}</td><td><code>{{ r.batch.batch_no }}</code></td><td class="text-end">{{ r.batch.available_quantity }}</td><td class="text-end {% if r.days_left <= 15 %}text-danger fw-bold{% endif %}">{{ r.days_left }} 天</td></tr>{% endfor %}
+      {% for r in expiring_rows %}<tr><td>{{ r.product.generic_name }}</td><td><code>{{ r.batch.batch_no }}</code></td><td class="">{{ r.batch.available_quantity }}</td><td class="{% if r.days_left <= 15 %}text-danger fw-bold{% endif %}">{{ r.days_left }} 天</td></tr>{% endfor %}
       </tbody></table></div></div>
     {% endif %}
   </div>

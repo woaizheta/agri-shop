@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Request, Form, Depends, Query
+from fastapi import APIRouter, Request, Form, Depends, Query
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -44,7 +44,7 @@ def _product_suggestion(p, inv):
     }
 
 @router.get("/")
-def list_products(request: Request, category_id: int = Query(None), search: str = Query(None), page: int = Query(1), db: Session = Depends(get_db)):
+def list_products(request: Request, category_id: int = Query(None), search: str = Query(None), page: int = Query(1), show_inactive: str = Query(None), db: Session = Depends(get_db)):
     query = db.query(Product)
     if category_id:
         cat_ids = [category_id]
@@ -56,14 +56,14 @@ def list_products(request: Request, category_id: int = Query(None), search: str 
             query = query.filter(Product.code == search)
         else:
             query = query.filter(or_(Product.generic_name.ilike(f"%{search}%"), Product.trade_name.ilike(f"%{search}%"), Product.barcode == search, Product.code.ilike(f"%{search}%")))
-    query = query.filter(Product.is_active == True).order_by(Product.code.desc())
+    if not show_inactive: query = query.filter(Product.is_active == True); query = query.order_by(Product.code.asc())
     result = paginate(query, page, 20)
     categories = db.query(Category).filter(Category.parent_id == None, Category.is_active == True).order_by(Category.sort_order).all()
     cat_tree = []
     for cat in categories:
         children = db.query(Category).filter(Category.parent_id == cat.id, Category.is_active == True).order_by(Category.sort_order).all()
         cat_tree.append({"cat": cat, "children": children})
-    return templates.TemplateResponse("products/list.html", {"request": request, **result, "categories": cat_tree, "current_category_id": category_id, "search": search or ""})
+    return templates.TemplateResponse("products/list.html", {"request": request, **result, "categories": cat_tree, "current_category_id": category_id, "search": search or "", "show_inactive": show_inactive or ""})
 
 @router.get("/search")
 def search_products(request: Request, q: str = Query(""), db: Session = Depends(get_db)):
@@ -175,4 +175,6 @@ def toggle_product(request: Request, id: int, db: Session = Depends(get_db)):
         product.is_active = not product.is_active
         product.updated_at = datetime.now(timezone.utc)
         db.commit()
-    return RedirectResponse("/products", 302)
+    # Preserve query params
+    qs = str(request.url.query) if request.url.query else ""
+    return RedirectResponse("/products?" + qs if qs else "/products", 302)

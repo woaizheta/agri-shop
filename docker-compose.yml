@@ -9,4 +9,6 @@ services:
       - AGRISHOP_DATA_DIR=/app/data
     volumes:
       - ./data:/app/data
+      - ./nongzi/templates:/app/nongzi/templates
+      - ./nongzi/static:/app/nongzi/static
     restart: unless-stopped

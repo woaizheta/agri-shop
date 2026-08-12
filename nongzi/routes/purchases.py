@@ -62,8 +62,8 @@ def create_purchase(request: Request, supplier_id: int = Form(...), order_date: 
         ).first()
         if existing:
             return RedirectResponse(f'/purchases/new?error=批号{bn}已存在', 302)
-        qty = float(quantity[i]) if i < len(quantity) else 0
-        uprice = float(unit_price[i]) if i < len(unit_price) else 0
+        qty = float(quantity[i]) if (i < len(quantity) and quantity[i]) else 0
+        uprice = float(unit_price[i]) if (i < len(unit_price) and unit_price[i]) else 0
         amt = round(qty * uprice, 2); total_amount += amt
         pd = str(prod_date[i]).strip() if i < len(prod_date) else ''
         ed = str(expiry_date[i]).strip() if i < len(expiry_date) else ''

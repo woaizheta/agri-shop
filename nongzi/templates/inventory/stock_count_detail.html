@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}盘点录入 - 丰收农资{% endblock %}
 {% block content %}
 <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">首页</a></li><li class="breadcrumb-item"><a href="/inventory">库存</a></li><li class="breadcrumb-item"><a href="/inventory/stock-count">盘点</a></li><li class="breadcrumb-item active">{{ sc.order_no }}</li></ol></nav>
@@ -43,7 +43,7 @@
     </tbody>
   </table></div>
   {% if sc.status != 'completed' %}
-  <div class="text-end mt-2">
+  <div class="mt-2">
     <button class="btn btn-primary" onclick="saveActual()"><i class="fas fa-save me-1"></i>保存实盘数</button>
   </div>
   {% endif %}

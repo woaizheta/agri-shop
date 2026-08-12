@@ -40,8 +40,11 @@ def ar_list(request: Request, search: str = Query(None), db: Session = Depends(g
         repayments = db.query(func.coalesce(func.sum(ARTransaction.amount), 0)).filter(
             ARTransaction.customer_id == cust.id, ARTransaction.type == "credit",
             ARTransaction.created_at >= month_start).scalar() or 0
+        all_debits = db.query(func.coalesce(func.sum(ARTransaction.amount), 0)).filter(ARTransaction.customer_id == cust.id, ARTransaction.type == "debit").scalar() or 0
+        all_credits = db.query(func.coalesce(func.sum(ARTransaction.amount), 0)).filter(ARTransaction.customer_id == cust.id, ARTransaction.type == "credit").scalar() or 0
+        balance = round(all_debits - all_credits, 2)
         rows.append({"customer": cust, "credit_sales": credit_sales, "repayments": repayments,
-                     "balance": round(cust.credit_balance, 2)})
+                     "balance": balance})
     return templates.TemplateResponse("finance/ar_list.html",
                                       {"request": request, "rows": rows, "search": search or ""})
 
