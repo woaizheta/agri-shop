@@ -126,12 +126,12 @@ def ap_list(request: Request, search: str = Query(None), db: Session = Depends(g
             PurchaseOrder.supplier_id == sup.id, PurchaseOrder.order_date >= month_start,
             PurchaseOrder.is_reversed == False).scalar() or 0
         payments = db.query(func.coalesce(func.sum(APTransaction.amount), 0)).filter(
-            APTransaction.supplier_id == sup.id, APTransaction.type == "debit",
+            APTransaction.supplier_id == sup.id, APTransaction.type == "payment",
             APTransaction.created_at >= month_start).scalar() or 0
         total_p = db.query(func.coalesce(func.sum(PurchaseOrder.total_amount), 0)).filter(
             PurchaseOrder.supplier_id == sup.id, PurchaseOrder.is_reversed == False).scalar() or 0
         total_pay = db.query(func.coalesce(func.sum(APTransaction.amount), 0)).filter(
-            APTransaction.supplier_id == sup.id, APTransaction.type == "debit").scalar() or 0
+            APTransaction.supplier_id == sup.id, APTransaction.type == "payment").scalar() or 0
         rows.append({"supplier": sup, "purchases": purchases, "payments": payments,
                      "balance": round(total_p - total_pay, 2)})
     return templates.TemplateResponse("finance/ap_list.html",
@@ -154,7 +154,7 @@ def api_unpaid_purchases(supplier_id: int = Query(...), db: Session = Depends(ge
 
 @router.post("/pay")
 def pay_supplier(request: Request, supplier_id: int = Form(...), amount: float = Form(...),
-                 note: str = Form(""), db: Session = Depends(get_db)):
+                 purchase_order_ids: str = Form(""), note: str = Form(""), db: Session = Depends(get_db)):
     from nongzi.models.finance import APTransaction
     from nongzi.models.purchase import PurchaseOrder
     from sqlalchemy import func
@@ -162,10 +162,37 @@ def pay_supplier(request: Request, supplier_id: int = Form(...), amount: float =
     total_p = db.query(func.coalesce(func.sum(PurchaseOrder.total_amount), 0)).filter(
         PurchaseOrder.supplier_id == supplier_id, PurchaseOrder.is_reversed == False).scalar() or 0
     total_pay = db.query(func.coalesce(func.sum(APTransaction.amount), 0)).filter(
-        APTransaction.supplier_id == supplier_id, APTransaction.type == "debit").scalar() or 0
-    new_balance = total_p - total_pay - amount
-    db.add(APTransaction(supplier_id=supplier_id, type="debit", amount=amount,
-                         balance_after=new_balance, note=note or "付款"))
+        APTransaction.supplier_id == supplier_id, APTransaction.type == "payment").scalar() or 0
+    orders = db.query(PurchaseOrder).filter(
+        PurchaseOrder.supplier_id == supplier_id, PurchaseOrder.is_reversed == False
+    ).order_by(PurchaseOrder.order_date.asc(), PurchaseOrder.id.asc()).all()
+    selected_ids = []
+    if purchase_order_ids:
+        selected_ids = [int(x.strip()) for x in purchase_order_ids.split(",") if x.strip()]
+    if selected_ids:
+        orders = [o for o in orders if o.id in selected_ids]
+
+    remaining = amount
+    balance = total_p - total_pay
+    for order in orders:
+        if remaining <= 0:
+            break
+        paid = db.query(func.coalesce(func.sum(APTransaction.amount), 0)).filter(
+            APTransaction.purchase_order_id == order.id,
+            APTransaction.type == "payment").scalar() or 0
+        unpaid_amt = order.total_amount - paid
+        if unpaid_amt <= 0:
+            continue
+        settle = min(remaining, unpaid_amt)
+        new_balance = balance - settle
+        db.add(APTransaction(supplier_id=supplier_id, purchase_order_id=order.id,
+                             type="payment", amount=settle, balance_after=new_balance,
+                             note=note or f"付款核销 {order.order_no}"))
+        balance = new_balance
+        remaining -= settle
+    if remaining > 0:
+        db.add(APTransaction(supplier_id=supplier_id, type="payment", amount=remaining,
+                             balance_after=balance - remaining, note=note or "付款"))
     db.commit()
     return RedirectResponse("/finance/ap", 302)
 

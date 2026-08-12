@@ -10,9 +10,9 @@
 {% endif %}
 <h4 class="mb-3"><i class="fas fa-chart-bar me-2"></i>销售报表</h4>
 <div class="btn-group mb-3">
-  <a href="?period=daily&selected_date={{ selected_date[:10] }}" class="btn btn-outline-success {% if period=='daily' %}active{% endif %}">日汇总</a>
-  <a href="?period=monthly&selected_date={{ ym_val }}" class="btn btn-outline-success {% if period=='monthly' %}active{% endif %}">月汇总</a>
-  <a href="?period=yearly&selected_date={{ selected_date[:4] }}" class="btn btn-outline-success {% if period=='yearly' %}active{% endif %}">年汇总</a>
+  <a href="?period=daily" class="btn btn-outline-success {% if period=='daily' %}active{% endif %}">日汇总</a>
+  <a href="?period=monthly" class="btn btn-outline-success {% if period=='monthly' %}active{% endif %}">月汇总</a>
+  <a href="?period=yearly" class="btn btn-outline-success {% if period=='yearly' %}active{% endif %}">年汇总</a>
 </div>
 <form class="row g-2 mb-3" method="get">
   <input type="hidden" name="period" value="{{ period }}">
