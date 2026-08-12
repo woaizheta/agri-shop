@@ -10,15 +10,53 @@
 <div class="card">
 <div class="card-body p-2">
 <button class="btn btn-success btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#repayModal"><i class="fas fa-plus me-1"></i>录入还款</button>
-<div class="table-responsive small"><table class="table table-hover table-sm mb-0"><thead class="table-light"><tr><th>客户</th><th>本期赊销</th><th>本期还款</th><th>当前余额</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.customer.name }}</td><td class="">{{ r.credit_sales|currency }}</td><td class="">{{ r.repayments|currency }}</td><td class="{% if r.balance > 0 %}text-danger fw-bold{% endif %}">{{ r.balance|currency }}</td></tr>{% endfor %}</tbody></table></div>
+<div class="table-responsive small"><table class="table table-hover table-sm mb-0"><thead class="table-light"><tr><th>客户</th><th>本期赊销</th><th>本期还款</th><th>当前余额</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.customer.name }}</td><td>{{ r.credit_sales|currency }}</td><td>{{ r.repayments|currency }}</td><td class="{% if r.balance > 0 %}text-danger fw-bold{% endif %}">{{ r.balance|currency }}</td></tr>{% endfor %}</tbody></table></div>
 </div></div>
 
-<div class="modal fade" id="repayModal"><div class="modal-dialog"><div class="modal-content"><form method="post" action="/finance/repay">
+<div class="modal fade" id="repayModal"><div class="modal-dialog modal-lg"><div class="modal-content"><form method="post" action="/finance/repay">
 <div class="modal-header"><h5>录入还款</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
 <div class="modal-body">
-<div class="mb-3"><label class="form-label">客户</label><select class="form-select" name="customer_id" required><option value="">-- 请选择 --</option>{% for r in rows %}<option value="{{ r.customer.id }}">{{ r.customer.name }} (欠款 {{ r.balance|currency }})</option>{% endfor %}</select></div>
-<div class="mb-3"><label class="form-label">还款金额</label><input class="form-control" type="number" step="0.01" name="amount" required></div>
+<div class="mb-3"><label class="form-label">客户</label><select class="form-select" id="repayCustomer" name="customer_id" required onchange="loadUnpaidOrders()"><option value="">-- 请选择 --</option>{% for r in rows %}<option value="{{ r.customer.id }}">{{ r.customer.name }} (欠款 {{ r.balance|currency }})</option>{% endfor %}</select></div>
+<div class="mb-3" id="unpaidOrdersSection" style="display:none">
+  <label class="form-label">待还款订单 <small class="text-muted">(选择一笔或多笔，默认按最早未付顺序分配)</small></label>
+  <div id="unpaidOrdersList" class="list-group mb-2" style="max-height:200px;overflow-y:auto"></div>
+  <input type="hidden" name="sale_order_ids" id="saleOrderIds" value="">
+</div>
+<div class="mb-3"><label class="form-label">还款金额 <span class="text-danger">*</span></label><input class="form-control" type="number" step="0.01" name="amount" id="repayAmount" required></div>
 <div class="mb-3"><label class="form-label">备注</label><input class="form-control" name="note"></div>
 </div><div class="modal-footer"><button type="submit" class="btn btn-success">确认还款</button></div>
 </form></div></div></div>
+
+<script>
+function loadUnpaidOrders(){
+    var cid = document.getElementById('repayCustomer').value;
+    var sec = document.getElementById('unpaidOrdersSection');
+    var list = document.getElementById('unpaidOrdersList');
+    if(!cid){ sec.style.display='none'; return; }
+    fetch('/finance/api/unpaid-orders?customer_id='+cid)
+        .then(r=>r.json()).then(data=>{
+            list.innerHTML='';
+            if(data.length===0){ list.innerHTML='<div class="text-muted small p-2">该客户无未付订单</div>'; sec.style.display='block'; return; }
+            data.forEach(function(o){
+                var div=document.createElement('div');
+                div.className='list-group-item py-1 d-flex justify-content-between align-items-center';
+                div.innerHTML='<span><code>'+o.order_no+'</code> '+o.date+' <span class="text-danger">'+o.amount.toFixed(2)+'</span></span>'+
+                    '<div class="form-check"><input class="form-check-input order-check" type="checkbox" value="'+o.id+'" onchange="updateOrderIds()" checked></div>';
+                list.appendChild(div);
+            });
+            sec.style.display='block';
+            updateOrderIds();
+        });
+}
+function updateOrderIds(){
+    var ids=[]; var total=0;
+    document.querySelectorAll('.order-check:checked').forEach(function(cb){
+        ids.push(cb.value);
+        var amtEl=cb.closest('.list-group-item').querySelector('.text-danger');
+        if(amtEl) total+=parseFloat(amtEl.textContent);
+    });
+    document.getElementById('saleOrderIds').value=ids.join(',');
+    if(ids.length>0) document.getElementById('repayAmount').value=total.toFixed(2);
+}
+</script>
 {% endblock %}

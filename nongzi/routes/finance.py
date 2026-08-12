@@ -49,8 +49,28 @@ def ar_list(request: Request, search: str = Query(None), db: Session = Depends(g
                                       {"request": request, "rows": rows, "search": search or ""})
 
 
+@router.get("/api/unpaid-orders")
+def api_unpaid_orders(customer_id: int = Query(...), db: Session = Depends(get_db)):
+    from nongzi.models.sale import SaleOrder
+    from nongzi.models.finance import ARTransaction
+    from sqlalchemy import func
+    orders = db.query(SaleOrder).filter(SaleOrder.customer_id == customer_id, SaleOrder.payment_method == "credit", SaleOrder.is_reversed == False).order_by(SaleOrder.order_date.asc()).all()
+    data = []
+    for o in orders:
+        paid = db.query(func.coalesce(func.sum(ARTransaction.amount), 0)).filter(ARTransaction.customer_id == customer_id, ARTransaction.type == "credit", (ARTransaction.sale_order_id == o.id) | (ARTransaction.sale_order_id == None)).scalar() or 0
+        unpaid = o.total_amount - paid
+        if unpaid <= 0: continue
+        # Sync paid_amount column
+        if abs((o.paid_amount or 0) - paid) > 0.01:
+            o.paid_amount = paid
+            o.is_paid = paid >= o.total_amount
+        data.append({"id": o.id, "order_no": o.order_no, "amount": round(unpaid, 2), "date": o.order_date.strftime("%Y-%m-%d") if o.order_date else ""})
+    if data:
+        db.commit()
+    return JSONResponse(data)
+
 @router.post("/repay")
-def repay(request: Request, customer_id: int = Form(...), amount: float = Form(...),
+def repay(request: Request, customer_id: int = Form(...), amount: float = Form(0.0), sale_order_ids: str = Form(""),
           note: str = Form(""), db: Session = Depends(get_db)):
     from nongzi.models.contact import Customer
     from nongzi.models.finance import ARTransaction
@@ -60,14 +80,22 @@ def repay(request: Request, customer_id: int = Form(...), amount: float = Form(.
     if amount <= 0: return RedirectResponse("/finance/ar", 302)
     unpaid = db.query(SaleOrder).filter(
         SaleOrder.customer_id == customer_id, SaleOrder.payment_method == "credit",
-        SaleOrder.is_paid == False, SaleOrder.is_reversed == False).order_by(SaleOrder.order_date.asc()).all()
+        SaleOrder.is_reversed == False).order_by(SaleOrder.order_date.asc()).all()
+    selected_ids = []
+    if sale_order_ids:
+        selected_ids = [int(x.strip()) for x in sale_order_ids.split(",") if x.strip()]
+    if selected_ids:
+        unpaid = [o for o in unpaid if o.id in selected_ids]
+    else:
+        unpaid = [o for o in unpaid if not o.is_paid]
     remaining = amount
     total_balance = cust.credit_balance
     for order in unpaid:
         if remaining <= 0: break
-        unpaid_amt = order.total_amount - order.paid_amount
+        unpaid_amt = order.total_amount - (order.paid_amount or 0)
+        if unpaid_amt <= 0: continue
         settle = min(remaining, unpaid_amt)
-        order.paid_amount += settle
+        order.paid_amount = (order.paid_amount or 0) + settle
         if order.paid_amount >= order.total_amount:
             order.is_paid = True
         new_balance = total_balance - settle
@@ -109,6 +137,18 @@ def ap_list(request: Request, search: str = Query(None), db: Session = Depends(g
     return templates.TemplateResponse("finance/ap_list.html",
                                       {"request": request, "rows": rows, "search": search or ""})
 
+
+@router.get("/api/unpaid-purchases")
+def api_unpaid_purchases(supplier_id: int = Query(...), db: Session = Depends(get_db)):
+    from nongzi.models.purchase import PurchaseOrder
+    orders = db.query(PurchaseOrder).filter(PurchaseOrder.supplier_id == supplier_id, PurchaseOrder.is_reversed == False).order_by(PurchaseOrder.order_date.asc()).all()
+    data = []
+    for o in orders:
+        paid = db.query(func.coalesce(func.sum(APTransaction.amount), 0)).filter(APTransaction.purchase_order_id == o.id, APTransaction.type == "payment").scalar() or 0
+        unpaid = o.total_amount - paid
+        if unpaid <= 0: continue
+        data.append({"id": o.id, "order_no": o.order_no, "amount": round(unpaid, 2), "date": o.order_date.strftime("%Y-%m-%d") if o.order_date else ""})
+    return JSONResponse(data)
 
 @router.post("/pay")
 def pay_supplier(request: Request, supplier_id: int = Form(...), amount: float = Form(...),
