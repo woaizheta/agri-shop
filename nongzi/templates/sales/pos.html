@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}零售开单 - 丰收农资{% endblock %}
-{% block head_extra %}<style>.cart-item { border-left: 3px solid #198754; margin-bottom: 0.5rem; }.split-inputs { font-size: 0.85rem; }.pos-left { min-height: 80vh; }</style>{% endblock %}
+{% block head_extra %}<style>.cart-item { border-left: 3px solid #198754; margin-bottom: 0.5rem; }.split-inputs { font-size: 0.85rem; }.pos-left { min-height: 80vh; }.pay-btn { flex:1; border-radius:8px; padding:10px 0; font-size:0.95rem; }</style>{% endblock %}
 {% block content %}
 <div class="row g-3">
   <div class="col-md-7 pos-left">
@@ -15,23 +15,31 @@
   <div class="col-md-5">
     <div class="card sticky-top" style="top:70px"><div class="card-header fw-bold"><i class="fas fa-calculator me-1"></i>结算</div><div class="card-body">
       <div class="mb-3"><h2 class="text-center text-danger" id="cartTotal">0.00</h2><div class="text-center text-muted small">合计金额</div></div>
-      <div class="mb-3"><label class="form-label">支付方式</label>
-        <div class="d-grid gap-1">
-          <input type="radio" class="btn-check" name="paymentMethod" value="cash" id="payCash" checked><label class="btn btn-outline-primary" for="payCash"><i class="fas fa-money-bill-wave me-1"></i>现金</label>
-          <input type="radio" class="btn-check" name="paymentMethod" value="wechat" id="payWechat"><label class="btn btn-outline-success" for="payWechat"><i class="fab fa-weixin me-1"></i>微信</label>
-          <input type="radio" class="btn-check" name="paymentMethod" value="alipay" id="payAlipay"><label class="btn btn-outline-info" for="payAlipay"><i class="fab fa-alipay me-1"></i>支付宝</label>
-          <input type="radio" class="btn-check" name="paymentMethod" value="credit" id="payCredit"><label class="btn btn-outline-warning" for="payCredit"><i class="fas fa-file-invoice me-1"></i>挂账（赊销）</label>
+      
+      <div class="mb-3"><label class="form-label">客户 <span class="text-muted small">(可选)</span></label>
+        <div class="position-relative">
+          <input class="form-control" id="customerSearch" placeholder="搜索客户姓名/电话...">
+          <div id="customerResults" class="list-group position-absolute w-100" style="z-index:1050;max-height:200px;overflow-y:auto;top:100%;left:0;display:none;"></div>
+        </div>
+        <div class="mt-1">
+          <span id="selectedCustomerLabel" class="small text-muted">默认：散户</span>
+          <a href="javascript:void(0)" class="small ms-1 text-decoration-none" id="clearCustomer" style="display:none" onclick="clearCustomer()">清除</a>
         </div>
       </div>
-      <div class="mb-3" id="creditCustomer" style="display:none;">
-        <label class="form-label">选择客户 <span class="text-danger">*</span></label>
-        <div class="position-relative"><input class="form-control" id="customerSearch" placeholder="搜索客户姓名/电话..."><div id="customerResults" class="list-group position-absolute w-100" style="z-index:1050;max-height:200px;overflow-y:auto;top:100%;left:0;display:none;"></div></div>
-        <div id="selectedCustomer" class="mt-1 small"></div>
-      </div>
-      
-<div class="modal fade" id="restrictedModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-danger text-white"><h5><i class="fas fa-exclamation-triangle me-1"></i>限制农药实名登记</h5></div><div class="modal-body"><p class="small text-muted">购物车中有限制农药，根据《农药管理条例》需实名购买。</p><div class="mb-2"><label class="form-label">购买人姓名 <span class="text-danger">*</span></label><input class="form-control" id="rsName" required></div><div class="mb-2"><label class="form-label">身份证号 <span class="text-danger">*</span></label><input class="form-control" id="rsIdCard" placeholder="18位身份证号" required></div><div class="mb-2"><label class="form-label">联系电话 <span class="text-danger">*</span></label><input class="form-control" id="rsPhone" required></div><div class="mb-2"><label class="form-label">用途（防治对象） <span class="text-danger">*</span></label><input class="form-control" id="rsPurpose" placeholder="如：防治蚜虫" required></div><div class="mb-2"><label class="form-label">使用作物 <span class="text-danger">*</span></label><input class="form-control" id="rsCrop" placeholder="如：小麦" required></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="submitRestricted()">确认登记并开单</button></div></div></div></div>
 
-<button class="btn btn-success btn-lg w-100" id="checkoutBtn" onclick="checkout()"><i class="fas fa-check-circle me-1"></i>确认开单</button>
+      <div class="mb-3"><label class="form-label">支付方式</label>
+        <div class="d-flex gap-1">
+          <button type="button" class="pay-btn btn btn-outline-success active" data-pm="cash" onclick="selectPayment('cash',this)"><i class="fas fa-money-bill-wave me-1"></i>现金</button>
+          <button type="button" class="pay-btn btn btn-outline-success" data-pm="wechat" onclick="selectPayment('wechat',this)"><i class="fab fa-weixin me-1"></i>微信</button>
+          <button type="button" class="pay-btn btn btn-outline-success" data-pm="alipay" onclick="selectPayment('alipay',this)"><i class="fab fa-alipay me-1"></i>支付宝</button>
+          <button type="button" class="pay-btn btn btn-outline-warning" data-pm="credit" onclick="selectPayment('credit',this)"><i class="fas fa-file-invoice me-1"></i>挂账</button>
+        </div>
+        <input type="hidden" id="paymentMethod" value="cash">
+      </div>
+
+      <div class="modal fade" id="restrictedModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-danger text-white"><h5><i class="fas fa-exclamation-triangle me-1"></i>限制农药实名登记</h5></div><div class="modal-body"><p class="small text-muted">购物车中有限制农药，根据《农药管理条例》需实名购买。</p><div class="mb-2"><label class="form-label">购买人姓名 <span class="text-danger">*</span></label><input class="form-control" id="rsName" required></div><div class="mb-2"><label class="form-label">身份证号 <span class="text-danger">*</span></label><input class="form-control" id="rsIdCard" placeholder="18位身份证号" required></div><div class="mb-2"><label class="form-label">联系电话 <span class="text-danger">*</span></label><input class="form-control" id="rsPhone" required></div><div class="mb-2"><label class="form-label">用途（防治对象） <span class="text-danger">*</span></label><input class="form-control" id="rsPurpose" placeholder="如：防治蚜虫" required></div><div class="mb-2"><label class="form-label">使用作物 <span class="text-danger">*</span></label><input class="form-control" id="rsCrop" placeholder="如：小麦" required></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="submitRestricted()">确认登记并开单</button></div></div></div></div>
+
+      <button class="btn btn-success btn-lg w-100" onclick="checkout()"><i class="fas fa-check-circle me-1"></i>确认开单</button>
     </div></div>
   </div>
 </div>
@@ -41,66 +49,140 @@
 <script>
 let cart = JSON.parse(sessionStorage.getItem('agrishop_cart') || '[]');
 let selectedCustomer = null;
+let currentPayment = 'cash';
 renderCart();
 
-document.querySelectorAll('input[name=paymentMethod]').forEach(r=>r.addEventListener('change',function(){ document.getElementById('creditCustomer').style.display=this.value==='credit'?'block':'none'; }));
-document.getElementById('creditCustomer').style.display = document.querySelector('input[name=paymentMethod]:checked')?.value === 'credit' ? 'block' : 'none';
+function selectPayment(pm, btn) {
+    currentPayment = pm;
+    document.getElementById('paymentMethod').value = pm;
+    document.querySelectorAll('.pay-btn').forEach(b => { b.classList.remove('active'); });
+    btn.classList.add('active');
+}
 
-let searchTimer;
-document.getElementById('productSearch').addEventListener('input',function(){ clearTimeout(searchTimer); const q=this.value.trim(); if(q.length<1){document.getElementById('searchResults').style.display='none';return;} searchTimer=setTimeout(()=>{fetch('/products/search?q='+encodeURIComponent(q)).then(r=>r.json()).then(data=>{const el=document.getElementById('searchResults');el.innerHTML='';if(data.length===0){el.innerHTML='<div class="list-group-item text-muted small">无匹配结果</div>';}else{data.forEach(p=>{const a=document.createElement('a');a.className='list-group-item list-group-item-action';a.innerHTML='<div class="d-flex justify-content-between"><div><strong>'+p.name+'</strong> <small class="text-muted">'+p.spec+'</small><br><small>'+p.code+' | 库存:'+p.stock+' '+p.baseUnit+'</small></div><div class=""><span class="text-danger fw-bold">'+p.retailPrice.toFixed(2)+'</span></div></div>';a.onclick=function(e){e.preventDefault();addToCart(p);document.getElementById('productSearch').value='';el.style.display='none';};el.appendChild(a);});}el.style.display='block';});},300);});
+function clearCustomer() {
+    selectedCustomer = null;
+    document.getElementById('customerSearch').value = '';
+    document.getElementById('selectedCustomerLabel').innerHTML = '默认：散户';
+    document.getElementById('selectedCustomerLabel').className = 'small text-muted';
+    document.getElementById('clearCustomer').style.display = 'none';
+}
 
-document.getElementById('productSearch').addEventListener('keydown',function(e){if(e.key==='Escape')document.getElementById('searchResults').style.display='none';});
+document.getElementById('productSearch').addEventListener('input', function() {
+    clearTimeout(this._timer);
+    const q = this.value.trim();
+    const el = document.getElementById('searchResults');
+    if (q.length < 1) { el.style.display = 'none'; return; }
+    this._timer = setTimeout(function() {
+        fetch('/products/search?q=' + encodeURIComponent(q)).then(r => r.json()).then(data => {
+            el.innerHTML = '';
+            data.forEach(p => {
+                const a = document.createElement('a');
+                a.className = 'list-group-item list-group-item-action py-2';
+                a.innerHTML = '<strong>' + p.code + '</strong> ' + p.name + (p.spec ? ' <small class="text-muted">' + p.spec + '</small>' : '') + ' <span class="text-danger float-end">¥' + p.retailPrice + '</span>' + (p.stock > 0 ? ' <small class="text-success">库存:' + p.stock + '</small>' : ' <small class="text-danger">缺货</small>');
+                a.onclick = function(e) { e.preventDefault(); addToCart(p); el.style.display = 'none'; document.getElementById('productSearch').value = ''; document.getElementById('productSearch').focus(); };
+                el.appendChild(a);
+            });
+            el.style.display = data.length ? 'block' : 'none';
+        });
+    }, 200);
+});
 
-let custTimer;
-document.getElementById('customerSearch').addEventListener('input',function(){ clearTimeout(custTimer); const q=this.value.trim(); if(q.length<1){document.getElementById('customerResults').style.display='none';return;} custTimer=setTimeout(()=>{fetch('/sales/customers/search?q='+encodeURIComponent(q)).then(r=>r.json()).then(data=>{const el=document.getElementById('customerResults');el.innerHTML='';data.forEach(c=>{const a=document.createElement('a');a.className='list-group-item list-group-item-action';a.innerHTML='<div>'+c.name+' <small class="text-muted">'+c.phone+'</small> <span class="badge bg-warning float-end">欠款:'+c.balance.toFixed(2)+'</span></div>';a.onclick=function(e){e.preventDefault();selectedCustomer=c;document.getElementById('customerSearch').value=c.name;document.getElementById('selectedCustomer').innerHTML='<span class="text-success"><i class="fas fa-check me-1"></i>已选: '+c.name+' ('+c.phone+')</span>';el.style.display='none';};el.appendChild(a);});el.style.display='block';});},300);});
+document.getElementById('customerSearch').addEventListener('input', function() {
+    clearTimeout(this._timer);
+    const q = this.value.trim();
+    const el = document.getElementById('customerResults');
+    if (q.length < 1) { el.style.display = 'none'; return; }
+    this._timer = setTimeout(function() {
+        fetch('/contacts/api/customers?q=' + encodeURIComponent(q)).then(r => r.json()).then(data => {
+            el.innerHTML = '';
+            data.forEach(c => {
+                const a = document.createElement('a');
+                a.className = 'list-group-item list-group-item-action py-2';
+                a.innerHTML = '<strong>' + c.name + '</strong> <small class="text-muted">' + (c.phone || '') + '</small>';
+                a.onclick = function(e) {
+                    e.preventDefault();
+                    selectedCustomer = c;
+                    document.getElementById('customerSearch').value = c.name;
+                    document.getElementById('selectedCustomerLabel').innerHTML = '<span class="text-primary"><i class="fas fa-user-check me-1"></i>' + c.name + '</span>';
+                    document.getElementById('clearCustomer').style.display = 'inline';
+                    el.style.display = 'none';
+                };
+                el.appendChild(a);
+            });
+            el.style.display = data.length ? 'block' : 'none';
+        });
+    }, 300);
+});
 
-function addToCart(p){ let found=cart.find(i=>i.productId===p.id); if(found){found.quantity+=1;}else{cart.push({productId:p.id,name:p.name,spec:p.spec||'',quantity:1,unitPrice:p.retailPrice,baseUnit:p.baseUnit,splitUnit:p.splitUnit||'',conversionRate:p.conversionRate||0,isRestricted:p.isRestricted});} saveCart();renderCart(); }
+function addToCart(p) {
+    let found = cart.find(i => i.productId === p.id);
+    if (found) { found.quantity += 1; }
+    else { cart.push({ productId: p.id, name: p.name, spec: p.spec || '', quantity: 1, unitPrice: p.retailPrice, baseUnit: p.baseUnit, splitUnit: p.splitUnit || '', conversionRate: p.conversionRate || 0, isRestricted: p.isRestricted }); }
+    saveCart(); renderCart();
+}
 
-function removeFromCart(idx){ cart.splice(idx,1); saveCart();renderCart(); }
+function removeFromCart(idx) { cart.splice(idx, 1); saveCart(); renderCart(); }
 
-function updateQty(idx,qty){ cart[idx].quantity=parseFloat(qty)||0; if(cart[idx].quantity<=0)cart.splice(idx,1); saveCart();renderCart(); }
+function updateQty(idx, qty) { cart[idx].quantity = parseFloat(qty) || 0; if (cart[idx].quantity <= 0) cart.splice(idx, 1); saveCart(); renderCart(); }
 
-function saveCart(){ sessionStorage.setItem('agrishop_cart',JSON.stringify(cart)); }
+function saveCart() { sessionStorage.setItem('agrishop_cart', JSON.stringify(cart)); }
 
-function renderCart(){ const container=document.getElementById('cartContainer'); document.getElementById('cartCount').textContent=cart.length; let total=0; if(cart.length===0){container.innerHTML='<div class="text-center text-muted py-5"><i class="fas fa-shopping-basket fa-3x mb-2"></i><p>购物车为空</p></div>';}else{let html='<div class="list-group list-group-flush">'; cart.forEach((item,idx)=>{ const amt=item.quantity*item.unitPrice; total+=amt; html+='<div class="list-group-item cart-item"><div class="d-flex justify-content-between align-items-start"><div class="flex-grow-1"><strong>'+item.name+'</strong> <small class="text-muted">'+item.spec+'</small>'+ (item.isRestricted?' <span class="badge bg-danger">限</span>':'')+'<br><small class="text-muted">¥'+item.unitPrice.toFixed(2)+'/'+item.baseUnit+'</small></div><button class="btn btn-sm btn-outline-danger ms-2" onclick="removeFromCart('+idx+')"><i class="fas fa-trash"></i></button></div><div class="d-flex align-items-center mt-1"><input class="form-control form-control-sm" type="number" step="0.01" value="'+item.quantity+'" style="width:80px" onchange="updateQty('+idx+',this.value)"><span class="ms-2 fw-bold" style="flex:1">'+amt.toFixed(2)+'</span></div>'+ (item.splitUnit && item.conversionRate ? '<div class="split-inputs text-muted mt-1"><small>拆零: <input type="number" step="any" class="form-control form-control-sm d-inline" style="width:80px" value="'+(item.quantity*item.conversionRate)+'" onchange="updateQty('+idx+',this.value/'+item.conversionRate+')"> '+item.splitUnit+'</small></div>' : '')+'</div>'; }); html+='</div>'; container.innerHTML=html; } document.getElementById('cartTotal').textContent=total.toFixed(2); }
+function renderCart() {
+    const container = document.getElementById('cartContainer');
+    document.getElementById('cartCount').textContent = cart.length;
+    let total = 0;
+    if (cart.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-shopping-basket fa-3x mb-2"></i><p>购物车为空</p></div>';
+    } else {
+        let html = '<div class="list-group list-group-flush">';
+        cart.forEach((item, idx) => {
+            const amt = item.quantity * item.unitPrice;
+            total += amt;
+            html += '<div class="list-group-item cart-item"><div class="d-flex justify-content-between align-items-start"><div class="flex-grow-1"><strong>' + item.name + '</strong> <small class="text-muted">' + item.spec + '</small>' + (item.isRestricted ? ' <span class="badge bg-danger">限</span>' : '') + '<br><small class="text-muted">¥' + item.unitPrice.toFixed(2) + '/' + item.baseUnit + '</small></div><button class="btn btn-sm btn-outline-danger ms-2" onclick="removeFromCart(' + idx + ')"><i class="fas fa-trash"></i></button></div><div class="d-flex align-items-center mt-1"><input class="form-control form-control-sm" type="number" step="0.01" value="' + item.quantity + '" style="width:80px" onchange="updateQty(' + idx + ',this.value)"><span class="ms-2 fw-bold" style="flex:1">' + amt.toFixed(2) + '</span></div></div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    document.getElementById('cartTotal').textContent = total.toFixed(2);
+}
 
-function checkout(){ 
-    if(cart.length===0){alert('购物车为空');return;} 
-    const hasRestricted = cart.some(i=>i.isRestricted);
-    if(hasRestricted){
+function checkout() {
+    if (cart.length === 0) { alert('购物车为空'); return; }
+    if (currentPayment === 'credit' && !selectedCustomer) { alert('挂账必须选择客户！请在客户搜索框中选择'); return; }
+    const hasRestricted = cart.some(i => i.isRestricted);
+    if (hasRestricted) {
         new bootstrap.Modal(document.getElementById('restrictedModal')).show();
         return;
     }
     doCheckout();
 }
-function doCheckout(){
-    const pm=document.querySelector('input[name=paymentMethod]:checked').value; 
-    if(pm==='credit' && !selectedCustomer){alert('挂账必须选择客户');return;} 
-    const fd=new FormData(); 
-    fd.append('items_json',JSON.stringify(cart)); 
-    fd.append('payment_method',pm); 
-    if(pm==='credit' && selectedCustomer) fd.append('customer_id',selectedCustomer.id);
-    fetch('/sales/pos',{method:'POST',body:fd}).then(r=>r.json()).then(data=>{
-        if(data.success){
-            cart=[]; saveCart(); renderCart();
-            selectedCustomer=null;
-            document.getElementById('selectedCustomer').innerHTML='';
-            document.getElementById('customerSearch').value='';
-            alert('开单成功! 单号: '+data.order_no);
-        }else if(data.error){alert(data.error);}
-        else{alert('开单失败');}
+
+function doCheckout() {
+    const fd = new FormData();
+    fd.append('items_json', JSON.stringify(cart));
+    fd.append('payment_method', currentPayment);
+    if (currentPayment === 'credit' && selectedCustomer) fd.append('customer_id', selectedCustomer.id);
+    else if (selectedCustomer) fd.append('customer_id', selectedCustomer.id);
+    fetch('/sales/pos', { method: 'POST', body: fd }).then(r => r.json()).then(data => {
+        if (data.success) {
+            cart = []; saveCart(); renderCart();
+            clearCustomer();
+            selectedCustomer = null;
+            alert('开单成功! 单号: ' + data.order_no);
+        } else if (data.error) { alert(data.error); }
+        else { alert('开单失败'); }
     });
 }
-function submitRestricted(){
-    const name=document.getElementById('rsName').value.trim();
-    const idCard=document.getElementById('rsIdCard').value.trim();
-    const phone=document.getElementById('rsPhone').value.trim();
-    const purpose=document.getElementById('rsPurpose').value.trim();
-    const crop=document.getElementById('rsCrop').value.trim();
-    if(!name||!idCard||!phone||!purpose||!crop){alert('请填写所有必填字段');return;}
-    if(!/^\d{17}[\dXx]$/.test(idCard)){alert('身份证号格式不正确');return;}
-    // Append restricted info to cart
-    cart.forEach(i=>{if(i.isRestricted){i.restricted={name,idCard,phone,purpose,crop};}});
+
+function submitRestricted() {
+    const name = document.getElementById('rsName').value.trim();
+    const idCard = document.getElementById('rsIdCard').value.trim();
+    const phone = document.getElementById('rsPhone').value.trim();
+    const purpose = document.getElementById('rsPurpose').value.trim();
+    const crop = document.getElementById('rsCrop').value.trim();
+    if (!name || !idCard || !phone || !purpose || !crop) { alert('请填写所有必填字段'); return; }
+    if (!/^\d{17}[\dXx]$/.test(idCard)) { alert('身份证号格式不正确'); return; }
+    cart.forEach(i => { if (i.isRestricted) { i.restricted = { name, idCard, phone, purpose, crop }; } });
     saveCart();
     bootstrap.Modal.getInstance(document.getElementById('restrictedModal')).hide();
     doCheckout();

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Form, Depends, Query
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import datetime, timezone
@@ -13,6 +13,18 @@ def _float_or_none(val: str):
     except (ValueError, TypeError): return None
 
 router = APIRouter(prefix='/contacts', tags=['往来单位'])
+
+@router.get("/api/customers")
+def api_customers(q: str = Query(""), db: Session = Depends(get_db)):
+    from nongzi.models.contact import Customer
+    from nongzi.models.finance import ARTransaction
+    if not q or len(q) < 1: return JSONResponse([])
+    customers = db.query(Customer).filter(Customer.is_active == True, Customer.name.ilike(f"%{q}%")).limit(10).all()
+    data = []
+    for c in customers:
+        balance = sum(t.amount if t.type == "debit" else -t.amount for t in db.query(ARTransaction).filter(ARTransaction.customer_id == c.id).all())
+        data.append({"id": c.id, "name": c.name, "phone": c.phone or "", "balance": round(balance, 2)})
+    return JSONResponse(data)
 
 import os
 from fastapi.templating import Jinja2Templates

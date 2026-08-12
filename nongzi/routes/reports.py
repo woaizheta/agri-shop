@@ -248,8 +248,7 @@ def sales_report(request: Request, period: str = Query("daily"), selected_date: 
         results = db.query(func.strftime("%Y-%m", SaleOrder.order_date),
                            func.sum(SaleOrder.total_amount)).filter(
             SaleOrder.order_date >= f"{y}-01-01", SaleOrder.order_date <= f"{y}-12-31",
-            SaleOrder.is_reversed == False).group_by(
-            func.strftime("%Y-%m", SaleOrder.order_date)).order_by("1").all()
+            SaleOrder.is_reversed == False).group_by(func.strftime("%Y-%m", SaleOrder.order_date)).order_by(func.strftime("%Y-%m", SaleOrder.order_date)).all()
         chart_labels = []
         chart_data = []
         for mm, amt in results:
