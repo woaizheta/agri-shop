@@ -140,6 +140,8 @@ def ap_list(request: Request, search: str = Query(None), db: Session = Depends(g
 
 @router.get("/api/unpaid-purchases")
 def api_unpaid_purchases(supplier_id: int = Query(...), db: Session = Depends(get_db)):
+    from sqlalchemy import func
+    from nongzi.models.finance import APTransaction
     from nongzi.models.purchase import PurchaseOrder
     orders = db.query(PurchaseOrder).filter(PurchaseOrder.supplier_id == supplier_id, PurchaseOrder.is_reversed == False).order_by(PurchaseOrder.order_date.asc()).all()
     data = []

@@ -27,7 +27,13 @@ def purchase_list(request: Request, search: str = Query(None), supplier_id: int 
     query = query.order_by(PurchaseOrder.order_date.desc())
     result = paginate(query, page, 20)
     suppliers = db.query(Supplier).filter(Supplier.is_active == True).order_by(Supplier.name).all()
-    return templates.TemplateResponse('purchases/list.html', {'request': request, **result, 'search': search or '', 'current_supplier_id': supplier_id, 'suppliers': suppliers})
+    from nongzi.models.finance import APTransaction
+    from sqlalchemy import func
+    paid_map = {}
+    for item in result.get('items', []):
+        paid = db.query(func.coalesce(func.sum(APTransaction.amount), 0)).filter(APTransaction.purchase_order_id == item.id, APTransaction.type == 'payment').scalar() or 0
+        paid_map[item.id] = round(paid, 2)
+    return templates.TemplateResponse('purchases/list.html', {'request': request, **result, 'search': search or '', 'current_supplier_id': supplier_id, 'suppliers': suppliers, 'paid_map': paid_map})
 
 
 @router.get('/new')
