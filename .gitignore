@@ -15,3 +15,4 @@ nongzi.spec
 build_portable.ps1
 launcher.py
 deploy.bat
+check.py
